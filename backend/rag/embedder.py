@@ -1,40 +1,50 @@
 """
-RAG Embedder — uses sentence-transformers to embed text chunks locally.
-Model: all-MiniLM-L6-v2 (fast, free, no API cost, great for semantic search)
+Embedder — uses Google Gemini Embedding API (text-embedding-004).
+No PyTorch or sentence-transformers required, making this deployment-friendly.
 """
 
-from sentence_transformers import SentenceTransformer
+import os
 import numpy as np
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-# Global model instance (loaded once)
-_model = None
+# Load .env from project root
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(_THIS_DIR))
+load_dotenv(os.path.join(_PROJECT_ROOT, ".env"))
 
+_API_KEY = os.getenv("GEMINI_API_KEY", "")
+if _API_KEY:
+    genai.configure(api_key=_API_KEY)
 
-def get_model() -> SentenceTransformer:
-    """Load model once and reuse."""
-    global _model
-    if _model is None:
-        print("Loading embedding model (first time may take a moment)...")
-        _model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-        print("Embedding model loaded.")
-    return _model
+EMBEDDING_MODEL = "models/text-embedding-004"
+EMBEDDING_DIM = 768  # text-embedding-004 outputs 768-dim vectors
 
 
 def embed_texts(texts: list[str]) -> np.ndarray:
     """
-    Embed a list of texts into numpy vectors.
-    Returns: np.ndarray of shape (len(texts), 384)
+    Embed a list of texts using Gemini text-embedding-004.
+    Returns a float32 numpy array of shape (n, 768).
     """
-    model = get_model()
-    embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
-    return embeddings.astype("float32")
+    embeddings = []
+    for text in texts:
+        result = genai.embed_content(
+            model=EMBEDDING_MODEL,
+            content=text,
+            task_type="retrieval_document"
+        )
+        embeddings.append(result["embedding"])
+    return np.array(embeddings, dtype=np.float32)
 
 
-def embed_query(query: str) -> np.ndarray:
+def embed_query(text: str) -> np.ndarray:
     """
     Embed a single query string.
-    Returns: np.ndarray of shape (1, 384)
+    Returns a float32 numpy array of shape (1, 768).
     """
-    model = get_model()
-    embedding = model.encode([query], convert_to_numpy=True, show_progress_bar=False)
-    return embedding.astype("float32")
+    result = genai.embed_content(
+        model=EMBEDDING_MODEL,
+        content=text,
+        task_type="retrieval_query"
+    )
+    return np.array([result["embedding"]], dtype=np.float32)
