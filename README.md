@@ -121,7 +121,7 @@ cd frontend
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open [https://wattmonk-assignment.vercel.app/].
 
 ---
 
