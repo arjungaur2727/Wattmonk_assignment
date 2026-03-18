@@ -14,8 +14,8 @@ build/
 venv/
 env/
 
-# FAISS indices (generated locally, not committed)
-embeddings/
+# FAISS indices — commit these so deployment platforms have them
+# embeddings/
 
 # Node
 node_modules/
